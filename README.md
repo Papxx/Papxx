@@ -12,7 +12,7 @@ I love building stuff myself and seeing how it all fits together. My homelab is 
 
 - 🎓 **Retraining as an IT Specialist for System Integration (FISI)**: networking, servers, security and IT projects
 - 🔎 **Hunting for an 8.5-month internship in IT** (system integration, sysadmin, infrastructure or support). If you've got an opening or know someone who does, hit me up!
-- 🏠 **Building out my homelab:** Proxmox VE on refurbished Intel mini PCs with Debian + Docker inside, plus monitoring, a media stack and remote access via Tailscale
+- 🏠 **Building out my homelab:** Proxmox VE on refurbished Intel mini PCs running a Debian VM with Docker plus an LXC container for Pi-hole, plus a media stack and remote access via Tailscale
 - 📦 **Moving house (for my servers):** migrating services from a rented Hetzner server to my own hardware at home
 - 📚 **Learning:** more automation, cybersecurity basics, and keeping my setups clean and reproducible
 
@@ -32,12 +32,13 @@ I love building stuff myself and seeing how it all fits together. My homelab is 
 ![Jellyfin](https://img.shields.io/badge/Jellyfin-00A4DC?style=for-the-badge&logo=jellyfin&logoColor=white)
 ![Immich](https://img.shields.io/badge/Immich-4250AF?style=for-the-badge&logo=immich&logoColor=white)
 ![Home Assistant](https://img.shields.io/badge/Home_Assistant-18BCF2?style=for-the-badge&logo=homeassistant&logoColor=white)
+![Dockge](https://img.shields.io/badge/Dockge-Compose_Manager-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Nodvard Deck](https://img.shields.io/badge/Nodvard_Deck-Homelab_Dashboard-5B5BD6?style=for-the-badge)
 ![AMP](https://img.shields.io/badge/AMP-Game_Server_Panel-4C9BE8?style=for-the-badge)
 
 ### Networking & Security
 ![Nginx Proxy Manager](https://img.shields.io/badge/Nginx_Proxy_Manager-F15833?style=for-the-badge&logo=nginxproxymanager&logoColor=white)
 ![Tailscale](https://img.shields.io/badge/Tailscale-242424?style=for-the-badge&logo=tailscale&logoColor=white)
-![WireGuard](https://img.shields.io/badge/WireGuard-88171A?style=for-the-badge&logo=wireguard&logoColor=white)
 ![Pi-hole](https://img.shields.io/badge/Pi--hole-96060C?style=for-the-badge&logo=pihole&logoColor=white)
 ![Fail2ban](https://img.shields.io/badge/Fail2ban-Hardening-2E7D32?style=for-the-badge)
 
@@ -47,14 +48,13 @@ I love building stuff myself and seeing how it all fits together. My homelab is 
 ![VS Code](https://img.shields.io/badge/VS_Code-007ACC?style=for-the-badge&logo=visualstudiocode&logoColor=white)
 
 ### AI-Assisted Workflows
-![Local LLMs](https://img.shields.io/badge/Local_LLMs-Self--Hosted-8A2BE2?style=for-the-badge)
 ![AI Pair Programming](https://img.shields.io/badge/AI_Assisted-Coding-1F8A70?style=for-the-badge)
 
 ---
 
 ## 🏗️ Homelab Architecture
 
-My homelab runs on **refurbished Intel mini PCs** (**Proxmox VE** as the hypervisor, with Debian + Docker running inside) plus a **Raspberry Pi 400** for smart home stuff. I manage containers with Dockge, keep an eye on things with Beszel, and have a Homepage dashboard as my start page. My home router doesn't let me forward ports, so **remote access goes through Tailscale** instead of exposed ports.
+My homelab runs on **refurbished Intel mini PCs** (**Proxmox VE** as the hypervisor, with a Debian VM running Docker and an LXC container running Pi-hole) plus a **Raspberry Pi 400** for smart home stuff. I manage my containers with Dockge and run everything through [Nodvard Deck](https://github.com/nodvard/deck), a self-hosted homelab dashboard that lives on my home server and also keeps an eye on my Raspberry Pi and my Hetzner server. My home router doesn't let me forward ports, so **remote access goes through Tailscale** instead of exposed ports. I've worked with WireGuard before and know my way around it a bit, but Tailscale is what I use these days.
 
 ```mermaid
 flowchart TB
@@ -65,19 +65,23 @@ flowchart TB
         direction TB
         Router["FRITZ!Box<br/>home router"]
 
-        subgraph Mini["Intel Mini PC (Proxmox VE, Debian + Docker inside)"]
+        subgraph Mini["Intel Mini PC (Proxmox VE)"]
             direction TB
-            Mgmt["Management<br/>Dockge"]
-            Mon["Monitoring<br/>Beszel + Homepage dashboard"]
-            NPM["Nginx Proxy Manager<br/>reverse proxy"]
-            PH["Pi-hole<br/>DNS filtering"]
-            subgraph Media["Media Stack"]
-                JF["Jellyfin"]
-                IM["Immich"]
+            subgraph VM["Debian VM (Docker)"]
+                direction TB
+                Mgmt["Management<br/>Dockge"]
+                Deck["Nodvard Deck<br/>management dashboard"]
+                subgraph Media["Media Stack"]
+                    JF["Jellyfin"]
+                    IM["Immich"]
+                end
+                Disk[("2 TB media disk")]
+                JF --> Disk
+                IM --> Disk
             end
-            Disk[("2 TB media disk")]
-            JF --> Disk
-            IM --> Disk
+            subgraph LXC["LXC Container"]
+                PH["Pi-hole<br/>DNS filtering"]
+            end
         end
 
         subgraph Pi["Raspberry Pi 400 (Ubuntu Server + CasaOS)"]
@@ -93,10 +97,10 @@ flowchart TB
     TS --> Pi
     Clients --> Router
     Router -- "DNS" --> PH
-    NPM -- "proxy" --> JF
-    NPM -- "proxy" --> IM
     Mgmt -. "manages" .-> Media
-    Mon -. "observes" .-> Mini
+    Deck -. "manages" .-> Media
+    Deck -. "manages" .-> LXC
+    Deck -. "manages" .-> Pi
 ```
 
 ---
@@ -126,8 +130,10 @@ flowchart TB
         Panel -. "manages" .-> Dock
     end
 
+    Deck2["Nodvard Deck<br/>hosted on my home server"]
     Backup[("Off-site Backups<br/>planned")]
 
+    Deck2 -. "manages" .-> HZ
     Internet -- "HTTPS" --> NPM2
     Internet -- "SSH" --> F2B
     Dock -. "scheduled dumps" .-> Backup
@@ -135,9 +141,8 @@ flowchart TB
 
 **The fun bits**
 
-- 🔐 **No open ports at home:** Tailscale for remote access, a reverse proxy for everything else
-- 🧱 **Virtualized base:** Proxmox VE underneath, Debian + Docker on top for my services
-- 📊 **Dashboards everywhere:** I like seeing what my nodes are up to
+- 🔐 **No open ports at home:** Tailscale for remote access instead of exposed ports
+- 🧱 **Virtualized base:** Proxmox VE underneath, a Debian VM with Docker and a Pi-hole LXC on top
 - 🎮 **Squeezing performance:** profiling and tuning hungry Minecraft modpack servers
 - 🔁 **Migration mode:** planning and moving services, data and media between hosts step by step
 
@@ -148,7 +153,7 @@ flowchart TB
 | Machine | Role | Specs |
 |---|---|---|
 | **Hetzner dedicated server** | Rented server for public-facing services and game servers | Intel Core i7-6700 (4C/8T), Intel HD 530 iGPU, ~62 GiB RAM, ~3.5 TB storage |
-| **Home server (mini PCs)** | Main homelab nodes (Proxmox VE host, Debian + Docker inside) | Refurbished Acer Veriton N4660G mini PC, Intel Core i5-9500T, 16 GB RAM, 512 GB SSD, 1 TB Netac NVMe, 2 TB media disk |
+| **Home server (mini PCs)** | Main homelab nodes (Proxmox VE host with a Debian Docker VM and a Pi-hole LXC) | Refurbished Acer Veriton N4660G mini PC, Intel Core i5-9500T, 16 GB RAM, 512 GB SSD, 1 TB Netac NVMe, 2 TB media disk |
 | **Raspberry Pi 400** | Smart home | Ubuntu Server + CasaOS, Home Assistant |
 | **Gaming PC** | Gaming and everyday driver | AMD Ryzen 7 5700X, MSI MPG B550 Gaming Plus, AMD Radeon RX 9060 XT 16 GB, 32 GB RAM |
 
@@ -161,7 +166,7 @@ flowchart TB
 | **Home media & photos** | My own media server and photo library | Jellyfin, Immich, Docker |
 | **Game server hosting** | Heavily modded Minecraft servers, tuned with profiling | AMP, Docker, Java |
 | **Client-side mods** | Hobby mods and addons for games, built with AI help | Java |
-| **Network services** | DNS-level ad/tracker blocking, mesh VPN, reverse proxy with TLS | Pi-hole, Tailscale, WireGuard, Nginx Proxy Manager |
+| **Network services** | DNS-level ad/tracker blocking, mesh VPN, reverse proxy with TLS | Pi-hole, Tailscale, Nginx Proxy Manager |
 | **Smart home** | Home automation running on a Raspberry Pi | Home Assistant, Docker, Raspberry Pi |
 
 ---
@@ -170,7 +175,7 @@ flowchart TB
 
 - **Fun first:** this is my hobby. I build things because it's enjoyable, not because I have to
 - **Hands-on:** I learn fastest by building, breaking and fixing real systems
-- **Vibe coding, honestly:** I use AI assistants and local LLMs to write code, and I'm upfront that I don't have deep programming knowledge. Code is a tool for me; my focus is getting systems running and understanding the infrastructure around them
+- **Vibe coding, honestly:** I use AI assistants to write code, and I'm upfront that I don't have deep programming knowledge. Code is a tool for me; my focus is getting systems running and understanding the infrastructure around them
 - **Tooling:** VS Code, Git and AI assistance
 - **Mindset:** troubleshoot step by step, automate the boring stuff, keep things simple
 
