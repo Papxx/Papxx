@@ -12,7 +12,7 @@ I love building stuff myself and seeing how it all fits together. My homelab is 
 
 - 🎓 **Retraining as an IT Specialist for System Integration (FISI)**: networking, servers, security and IT projects
 - 🔎 **Hunting for an 8.5-month internship in IT** (system integration, sysadmin, infrastructure or support). If you've got an opening or know someone who does, hit me up!
-- 🏠 **Building out my homelab:** Debian + Docker on refurbished Intel mini PCs, with monitoring, a media stack and remote access via Tailscale
+- 🏠 **Building out my homelab:** Proxmox VE on refurbished Intel mini PCs with Debian + Docker inside, plus monitoring, a media stack and remote access via Tailscale
 - 📦 **Moving house (for my servers):** migrating services from a rented Hetzner server to my own hardware at home
 - 📚 **Learning:** more automation, cybersecurity basics, and keeping my setups clean and reproducible
 
@@ -21,6 +21,7 @@ I love building stuff myself and seeing how it all fits together. My homelab is 
 ## 🛠️ Skills & Tech Stack
 
 ### Operating Systems & Hardware
+![Proxmox](https://img.shields.io/badge/Proxmox_VE-E57000?style=for-the-badge&logo=proxmox&logoColor=white)
 ![Debian](https://img.shields.io/badge/Debian-A81D33?style=for-the-badge&logo=debian&logoColor=white)
 ![Ubuntu Server](https://img.shields.io/badge/Ubuntu_Server-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)
 ![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)
@@ -28,11 +29,9 @@ I love building stuff myself and seeing how it all fits together. My homelab is 
 
 ### Containers & Self-Hosting
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
-![Portainer](https://img.shields.io/badge/Portainer-13BEF9?style=for-the-badge&logo=portainer&logoColor=white)
 ![Jellyfin](https://img.shields.io/badge/Jellyfin-00A4DC?style=for-the-badge&logo=jellyfin&logoColor=white)
 ![Immich](https://img.shields.io/badge/Immich-4250AF?style=for-the-badge&logo=immich&logoColor=white)
 ![Home Assistant](https://img.shields.io/badge/Home_Assistant-18BCF2?style=for-the-badge&logo=homeassistant&logoColor=white)
-![Vaultwarden](https://img.shields.io/badge/Vaultwarden-175DDC?style=for-the-badge&logo=bitwarden&logoColor=white)
 ![AMP](https://img.shields.io/badge/AMP-Game_Server_Panel-4C9BE8?style=for-the-badge)
 
 ### Networking & Security
@@ -55,7 +54,7 @@ I love building stuff myself and seeing how it all fits together. My homelab is 
 
 ## 🏗️ Homelab Architecture
 
-My homelab runs on **refurbished Intel mini PCs** (Debian + Docker, no hypervisor on purpose, I like to keep it lean) plus a **Raspberry Pi 400** for smart home stuff and passwords. I manage containers with Dockge and Portainer, keep an eye on things with Beszel, and have a Homepage dashboard as my start page. My home router doesn't let me forward ports, so **remote access goes through Tailscale** instead of exposed ports.
+My homelab runs on **refurbished Intel mini PCs** (**Proxmox VE** as the hypervisor, with Debian + Docker running inside) plus a **Raspberry Pi 400** for smart home stuff. I manage containers with Dockge, keep an eye on things with Beszel, and have a Homepage dashboard as my start page. My home router doesn't let me forward ports, so **remote access goes through Tailscale** instead of exposed ports.
 
 ```mermaid
 flowchart TB
@@ -66,9 +65,9 @@ flowchart TB
         direction TB
         Router["FRITZ!Box<br/>home router"]
 
-        subgraph Mini["Intel Mini PC (Debian + Docker)"]
+        subgraph Mini["Intel Mini PC (Proxmox VE, Debian + Docker inside)"]
             direction TB
-            Mgmt["Management<br/>Dockge, Portainer, Cockpit"]
+            Mgmt["Management<br/>Dockge"]
             Mon["Monitoring<br/>Beszel + Homepage dashboard"]
             NPM["Nginx Proxy Manager<br/>reverse proxy"]
             PH["Pi-hole<br/>DNS filtering"]
@@ -84,7 +83,6 @@ flowchart TB
         subgraph Pi["Raspberry Pi 400 (Ubuntu Server + CasaOS)"]
             direction TB
             HA["Home Assistant"]
-            VW["Vaultwarden"]
         end
 
         Clients(["💻 Local Clients"])
@@ -138,10 +136,21 @@ flowchart TB
 **The fun bits**
 
 - 🔐 **No open ports at home:** Tailscale for remote access, a reverse proxy for everything else
-- 🧱 **Keep it simple:** Debian + Docker on bare metal instead of a heavy hypervisor stack
+- 🧱 **Virtualized base:** Proxmox VE underneath, Debian + Docker on top for my services
 - 📊 **Dashboards everywhere:** I like seeing what my nodes are up to
 - 🎮 **Squeezing performance:** profiling and tuning hungry Minecraft modpack servers
 - 🔁 **Migration mode:** planning and moving services, data and media between hosts step by step
+
+---
+
+## 🖥️ Hardware
+
+| Machine | Role | Specs |
+|---|---|---|
+| **Hetzner dedicated server** | Rented server for public-facing services and game servers | Intel Core i7-6700 (4C/8T), Intel HD 530 iGPU, ~62 GiB RAM, ~3.5 TB storage |
+| **Home server (mini PCs)** | Main homelab nodes (Proxmox VE host, Debian + Docker inside) | Refurbished Acer Veriton N4660G mini PC, Intel Core i5-9500T, 16 GB RAM, 512 GB SSD, 1 TB Netac NVMe, 2 TB media disk |
+| **Raspberry Pi 400** | Smart home | Ubuntu Server + CasaOS, Home Assistant |
+| **Gaming PC** | Gaming and everyday driver | AMD Ryzen 7 5700X, MSI MPG B550 Gaming Plus, AMD Radeon RX 9060 XT 16 GB, 32 GB RAM |
 
 ---
 
@@ -153,7 +162,7 @@ flowchart TB
 | **Game server hosting** | Heavily modded Minecraft servers, tuned with profiling | AMP, Docker, Java |
 | **Client-side mods** | Hobby mods and addons for games, built with AI help | Java |
 | **Network services** | DNS-level ad/tracker blocking, mesh VPN, reverse proxy with TLS | Pi-hole, Tailscale, WireGuard, Nginx Proxy Manager |
-| **Smart home & secrets** | Home automation and a self-hosted password manager | Home Assistant, Vaultwarden, Raspberry Pi |
+| **Smart home** | Home automation running on a Raspberry Pi | Home Assistant, Docker, Raspberry Pi |
 
 ---
 
